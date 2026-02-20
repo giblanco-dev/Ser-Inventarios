@@ -1,0 +1,175 @@
+# SER Inventarios v1.0 — Plan de Implementación
+
+Construir un sistema completo de gestión de inventarios en PHP 8.1 + MySQL 8.0 para la "Clínica de Medicina Alternativa", siguiendo la especificación en [Design/EspecificacionSER_Inventarios_v1-0.md](file:///c:/ApacheServer/htdocs/Ser-Inventarios/Design/EspecificacionSER_Inventarios_v1-0.md) y el diseño UI de [Design/desing_ux.webp](file:///c:/ApacheServer/htdocs/Ser-Inventarios/Design/desing_ux.webp).
+
+## Revisión Requerida por el Usuario
+
+> [!IMPORTANT]
+> **Credenciales de BD**: El plan usa credenciales placeholder en `app/config/config.php`. Debes proporcionar tu host MySQL, usuario, contraseña y nombre de base de datos antes de ejecutar.
+
+> [!IMPORTANT]
+> **Configuración de Apache**: La app requiere `mod_rewrite` habilitado y `AllowOverride All` para que el `.htaccess` funcione. Confirma que tu Apache lo soporta.
+
+---
+
+## Cambios Propuestos
+
+### 1. Esquema de Base de Datos
+
+#### [NEW] [schemaserinventarios.sql](file:///c:/ApacheServer/htdocs/Ser-Inventarios/database/schemaserinventarios.sql)
+
+Esquema completo MySQL con:
+- Tablas: `medidainsumo`, `tipoinsumo`, `conceptomovimiento`, `insumos`, `insumocodigobarra`, `movimientos`, `movimientodetalle`
+- Vistas: `v_stock_actual`, `v_alertas_vencimiento`, `v_historial_movimientos`, `v_busqueda_codigo_barra`
+- Motor InnoDB, claves foráneas, índices en campos clave
+- Datos semilla para catálogos iniciales
+
+---
+
+### 2. Arquitectura Core (`app/`)
+
+#### [NEW] [config.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/config/config.php)
+Credenciales de BD, constantes de la app (`APP_NAME`, `BASE_URL`, `ITEMS_PER_PAGE`), toggle de entorno.
+
+#### [NEW] [Database.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/core/Database.php)
+Singleton PDO: `ERRMODE_EXCEPTION`, `FETCH_ASSOC`, `EMULATE_PREPARES false`, charset `utf8mb4`. Métodos: `getInstance()`, `prepare()`, `beginTransaction()`, `commit()`, `rollBack()`.
+
+#### [NEW] [Router.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/core/Router.php)
+Router front-controller simple que mapea segmentos de URL a pares controlador/acción. Patrón: `/{controlador}/{accion}/{id?}`.
+
+#### [NEW] [Validator.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/core/Validator.php)
+Validador de inputs basado en reglas (`required`, `maxLength`, `integer`, `min`, `enum`). Retorna array de errores.
+
+#### [NEW] [BaseModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/core/BaseModel.php)
+Clase abstracta con `findAll()`, `findById()`, `create()`, `update()`, `softDelete()`. Todo con prepared statements.
+
+#### [NEW] [helpers.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/helpers/helpers.php)
+Funciones: `formatDate()`, `flashMessage()`, `getFlash()`, `sanitize()`, `paginateQuery()`, `stockBadge()`, `redirect()`, `csrfField()`, `verifyCsrf()`, `e()` (atajo de htmlspecialchars).
+
+#### [NEW] [csrf.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/middleware/csrf.php)
+Middleware de generación + verificación de token CSRF.
+
+---
+
+### 3. Modelos (`app/models/`)
+
+#### [NEW] [MedidaInsumoModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/models/MedidaInsumoModel.php)
+CRUD para unidades de medida. Incluye verificación de dependencias antes de baja lógica (insumos activos que la usen).
+
+#### [NEW] [TipoInsumoModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/models/TipoInsumoModel.php)
+CRUD para tipos de insumo. Mismo patrón de validación de dependencias.
+
+#### [NEW] [ConceptoMovimientoModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/models/ConceptoMovimientoModel.php)
+CRUD con `TipoOperacion` (ENTRADA/SALIDA). Valida que no existan movimientos registrados antes de baja lógica.
+
+#### [NEW] [InsumoModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/models/InsumoModel.php)
+Modelo central. Filtrado por tipo, unidad, estado de stock, bandera de caducidad. Stock calculado desde movimientos. `Existencia` nunca se edita directamente.
+
+#### [NEW] [InsumoCodigoBarraModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/models/InsumoCodigoBarraModel.php)
+Gestión de códigos de barra por insumo. Validación de unicidad global.
+
+#### [NEW] [MovimientoModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/models/MovimientoModel.php)
+Registro transaccional. `registrar($cabecera, $detalles)` — inserta cabecera + líneas de detalle + actualiza stock, todo dentro de `BEGIN/COMMIT`. Para SALIDA, valida que no quede stock negativo.
+
+#### [NEW] [DashboardModel.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/app/models/DashboardModel.php)
+Consultas KPI: total activos, conteo stock CRÍTICO, conteo stock BAJO, vencimientos próximos. Usa las vistas SQL.
+
+---
+
+### 4. Controladores (`app/controllers/`)
+
+Un controlador por módulo: `DashboardController`, `InsumosController`, `MovimientosController`, `MedidaInsumoController`, `TipoInsumoController`, `ConceptoMovimientoController`, `CodigoBarraController`.
+
+Cada uno sigue el patrón:
+- `index()` → listar (GET)
+- `create()` → mostrar formulario (GET) / procesar (POST)
+- `edit($id)` → mostrar formulario (GET) / procesar (POST)
+- `delete($id)` → baja lógica (POST)
+
+---
+
+### 5. Punto de Entrada Público
+
+#### [NEW] [index.php](file:///c:/ApacheServer/htdocs/Ser-Inventarios/public/index.php)
+Front controller: inicia sesión, carga config/helpers/middleware, instancia Router, despacha.
+
+#### [NEW] [.htaccess](file:///c:/ApacheServer/htdocs/Ser-Inventarios/public/.htaccess)
+Reescribe todas las peticiones que no sean archivos hacia `index.php`.
+
+#### [NEW] [.htaccess](file:///c:/ApacheServer/htdocs/Ser-Inventarios/.htaccess)
+Redirección a nivel raíz hacia `public/`.
+
+---
+
+### 6. Frontend — CSS
+
+#### [NEW] [app.css](file:///c:/ApacheServer/htdocs/Ser-Inventarios/public/assets/css/app.css)
+
+Sistema de diseño completo siguiendo la paleta del § 2 de la especificación y el layout de [desing_ux.webp](file:///c:/ApacheServer/htdocs/Ser-Inventarios/Design/desing_ux.webp):
+- Custom properties CSS para todos los colores de la paleta
+- Navegación tipo sidebar (fija en desktop, colapsable en mobile) inspirada en la imagen de diseño
+- Fila de tarjetas KPI en la parte superior del dashboard
+- Layout de cuadrícula para secciones de contenido
+- DataTable con filas alternas paginadas
+- Badges (OK/BAJO/CRÍTICO, ENTRADA/SALIDA)
+- Componentes: modal, flash message, formularios, breadcrumb
+- Breakpoints responsivos
+
+---
+
+### 7. Frontend — JavaScript
+
+#### [NEW] [app.js](file:///c:/ApacheServer/htdocs/Ser-Inventarios/public/assets/js/app.js)
+Toggle del sidebar, auto-cierre de flash (4s), modales de confirmación, búsqueda con debounce (300ms).
+
+#### [NEW] [movimientos.js](file:///c:/ApacheServer/htdocs/Ser-Inventarios/public/assets/js/movimientos.js)
+Líneas dinámicas de detalle de movimiento: agregar/eliminar filas de insumo, búsqueda AJAX de insumos, mostrar automáticamente campos de lote/vencimiento según `Caducidad`.
+
+---
+
+### 8. Vistas (`views/`)
+
+#### Layout y Partials
+- `views/layouts/master.php` — Shell HTML con sidebar, barra superior, área de contenido, flash
+- `views/partials/_flash.php` — Banner de mensajes flash
+- `views/partials/_pagination.php` — Controles de paginación
+- `views/partials/_confirm_modal.php` — Modal de confirmación
+- `views/partials/_breadcrumb.php` — Navegación breadcrumb
+
+#### Dashboard
+- `views/dashboard/index.php` — Tarjetas KPI + tabla stock crítico + alertas de vencimiento + actividad reciente
+
+#### Catálogos (patrón compartido por cada catálogo)
+- `views/medida_insumo/index.php` + `form.php`
+- `views/tipo_insumo/index.php` + `form.php`
+- `views/concepto_movimiento/index.php` + `form.php`
+
+#### Insumos
+- `views/insumos/index.php` — Tabla paginada con filtros
+- `views/insumos/form.php` — Formulario crear/editar
+- `views/insumos/show.php` — Vista de detalle
+- `views/insumos/codigos_barra.php` — Gestión de códigos de barra
+
+#### Movimientos
+- `views/movimientos/create.php` — Formulario de registro con líneas de detalle dinámicas
+- `views/movimientos/index.php` — Tabla de historial con filtros
+
+---
+
+## Plan de Verificación
+
+### Pruebas en Navegador
+Al ser una app PHP que requiere Apache + MySQL, la verificación se hará mediante el navegador:
+
+1. **Navegar al Dashboard** (`http://localhost/Ser-Inventarios/public/`) y verificar que las tarjetas KPI se renderizan correctamente
+2. **Probar CRUD de Catálogos** — crear una nueva MedidaInsumo, editarla, verificar que la validación de dependencias impide inactivarla cuando está en uso
+3. **Probar CRUD de Insumos** — crear un insumo, verificar que Existencia es solo lectura, gestionar códigos de barra
+4. **Probar Registro de Movimientos** — crear un movimiento ENTRADA, verificar que el stock aumenta; crear SALIDA, verificar que disminuye; intentar stock negativo para verificar validación
+5. **Verificar Mensajes Flash** — confirmar que los mensajes de éxito/error aparecen y se auto-cierran
+
+### Verificación Manual (Usuario)
+Dado que la base de datos requiere credenciales MySQL y configuración de Apache:
+1. **Importar** `database/schemaserinventarios.sql` en tu instancia MySQL
+2. **Configurar** `app/config/config.php` con tus credenciales de BD
+3. **Abrir** `http://localhost/Ser-Inventarios/public/` en tu navegador
+4. **Recorrer** cada módulo para verificar operaciones CRUD, validaciones y consistencia de la UI

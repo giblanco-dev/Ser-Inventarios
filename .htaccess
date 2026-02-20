@@ -1,0 +1,6 @@
+RewriteEngine On
+
+# Redirigir todo al directorio public/
+RewriteCond %{REQUEST_URI} !^/Ser-Inventarios/public/
+RewriteCond %{REQUEST_URI} !^/Ser-Inventarios/Design/
+RewriteRule ^(.*)$ public/$1 [L]
