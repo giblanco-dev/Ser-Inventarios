@@ -1084,3 +1084,19 @@ textarea.form-control {
     font-size: 0.78rem;
     color: var(--color-text-muted);
 }
+
+/* ── Enfermería Badges ────────────────────────────────── */
+.badge--entrega    { background: var(--color-ok-bg);      color: var(--color-ok); }
+.badge--devolucion { background: var(--color-warning-bg);  color: var(--color-warning); }
+
+/* ── Enfermería Detail Lines (simplified: no lote/vencimiento) */
+.enfermeria-lines .detail-line {
+    grid-template-columns: 2fr 1fr auto;
+}
+
+@media (max-width: 768px) {
+    .enfermeria-lines .detail-line {
+        grid-template-columns: 1fr;
+    }
+}
+

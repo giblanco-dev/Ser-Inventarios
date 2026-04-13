@@ -40,6 +40,11 @@
                 <span class="icon">🔄</span> Movimientos
             </a>
 
+            <div class="sidebar-section">Enfermería</div>
+            <a href="<?= url('insumos-enfermeria') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'insumos-enfermeria' ? 'active' : '' ?>">
+                <span class="icon">🏥</span> Insumos Enfermería
+            </a>
+
             <div class="sidebar-section">Catálogos</div>
             <a href="<?= url('medida-insumo') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'medida-insumo' ? 'active' : '' ?>">
                 <span class="icon">📏</span> Unidades de Medida
