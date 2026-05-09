@@ -155,7 +155,7 @@ class InsumosElectronicosModel extends BaseModel
                      :TipoDispositivoID, :Almacenamiento, :RAM, :Procesador,
                      :SO, :Usuario, :Pass, :PassAdmin,
                      :ResponsableID, :ConexionRemota, :ID_Conexion,
-                     :PassConexionRemota, :Descripcion, :usuario_sys, :usuario_sys)";
+                     :PassConexionRemota, :Descripcion, :usuario_creacion, :usuario_actualiza)";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -176,7 +176,8 @@ class InsumosElectronicosModel extends BaseModel
             'ID_Conexion'       => $data['ID_Conexion'] !== '' ? $data['ID_Conexion'] : null,
             'PassConexionRemota'=> $data['PassConexionRemota'] !== '' ? $data['PassConexionRemota'] : null,
             'Descripcion'       => $data['Descripcion'] !== '' ? $data['Descripcion'] : null,
-            'usuario_sys'       => $_SESSION['username'] ?? 'sistema',
+            'usuario_creacion'  => $_SESSION['username'] ?? 'sistema',
+            'usuario_actualiza' => $_SESSION['username'] ?? 'sistema',
         ]);
 
         return (int) $this->db->lastInsertId();
