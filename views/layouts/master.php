@@ -45,7 +45,15 @@
                 <span class="icon">🏥</span> Insumos Enfermería
             </a>
 
+            <div class="sidebar-section">TI / Electrónicos</div>
+            <a href="<?= url('insumos-electronicos') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'insumos-electronicos' ? 'active' : '' ?>">
+                <span class="icon">🖥️</span> Activos TI
+            </a>
+
             <div class="sidebar-section">Catálogos</div>
+            <a href="<?= url('catalogo-terapias') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'catalogo-terapias' ? 'active' : '' ?>">
+                <span class="icon">🧪</span> Terapias
+            </a>
             <a href="<?= url('medida-insumo') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'medida-insumo' ? 'active' : '' ?>">
                 <span class="icon">📏</span> Unidades de Medida
             </a>
@@ -54,6 +62,18 @@
             </a>
             <a href="<?= url('concepto-movimiento') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'concepto-movimiento' ? 'active' : '' ?>">
                 <span class="icon">📋</span> Conceptos de Mov.
+            </a>
+            <a href="<?= url('ubicacion') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'ubicacion' ? 'active' : '' ?>">
+                <span class="icon">📍</span> Ubicaciones
+            </a>
+            <a href="<?= url('tipo-dispositivo') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'tipo-dispositivo' ? 'active' : '' ?>">
+                <span class="icon">💾</span> Tipos de Dispositivo
+            </a>
+            <a href="<?= url('responsable') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'responsable' ? 'active' : '' ?>">
+                <span class="icon">👤</span> Responsables
+            </a>
+            <a href="<?= url('puesto') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'puesto' ? 'active' : '' ?>">
+                <span class="icon">💼</span> Puestos
             </a>
         </nav>
 
