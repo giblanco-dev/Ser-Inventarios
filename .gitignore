@@ -1,0 +1,6 @@
+# Archivo de conexión / credenciales — usar config.example.php como plantilla
+app/config/config.php
+
+# Herramientas de agentes IA
+.claude/
+.serena/

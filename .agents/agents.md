@@ -269,23 +269,41 @@ Toda modificación de stock ocurre dentro de una **transacción** con `BEGIN →
 
 ## 7. Módulo de Catálogo de Terapias — Detalle Técnico
 
-> Módulo adicional no contemplado en la especificación v1.0. Permite definir terapias y asociarles insumos INTE con cantidades específicas.
+> Módulo adicional no contemplado en la especificación v1.0. `catalogo_terapias` es un espejo LOCAL, de solo lectura hacia el ERP, de la tabla `ser.terapias`: el alta/baja de la terapia en sí (nombre, ID, activo/inactivo) se gobierna desde el ERP y llega aquí vía sincronización manual (botón). Este módulo solo gestiona localmente qué insumos INTE consume cada terapia — no existe alta, edición de nombre ni baja manual de terapias.
 
 ### Estructura
-- **`catalogo_terapias`**: cabecera — campos `id_terapiaINV` (PK), `id_terapiaERP` (ID en sistema ERP externo), `nom_terapia`, `Activo`, `UsuarioCreacion`, `UsuarioActualiza`
+- **`catalogo_terapias`**: cabecera — campos `id_terapiaINV` (PK, igual a `ser.terapias.id_terapia`), `id_terapiaERP`, `nom_terapia`, `Activo` (reflejado desde `ser.terapias.activo` en cada sync), `UsuarioCreacion`, `UsuarioActualiza`
 - **`detalle_terapias`**: detalle — `id_terapiaINV` FK, `id_terapiaERP`, `idInsumo` FK→insumos, `CantidadInsumo`
 
 ### Rutas del Módulo
 | URL | Acción |
 |-----|--------|
 | `GET /catalogo-terapias` | Listado de terapias activas |
-| `GET /catalogo-terapias/create` | Formulario nueva terapia |
-| `POST /catalogo-terapias/store` | Guarda nueva terapia |
-| `GET /catalogo-terapias/edit/{id}` | Formulario editar terapia |
-| `POST /catalogo-terapias/update/{id}` | Actualiza terapia |
-| `POST /catalogo-terapias/delete/{id}` | Baja lógica |
+| `POST /catalogo-terapias/sync` | Sincroniza altas/actualizaciones/bajas desde `ser.terapias` (solo `SELECT`, nunca escribe en el ERP) |
+| `GET /catalogo-terapias/edit/{id}` | Formulario para editar los insumos de la terapia (nombre/ID de solo lectura) |
+| `POST /catalogo-terapias/update/{id}` | Regenera `detalle_terapias` para la terapia |
 
-> ⚠️ **PENDIENTE CRÍTICO**: Las tablas `catalogo_terapias` y `detalle_terapias` no tienen SQL de creación en el repositorio. Deben crearse manualmente en BD antes de usar este módulo.
+> ⚠️ **PENDIENTE CRÍTICO**: Las tablas `catalogo_terapias` y `detalle_terapias` no tienen SQL de creación en el repositorio (viven en `Design/catalogo_terapias.sql`, no en `database/`).
+
+---
+
+## 7bis. Módulo de Catálogo de Sueros — Detalle Técnico
+
+> Mismo patrón que el Módulo de Catálogo de Terapias (sección 7): `catalogo_sueros` es un espejo LOCAL, de solo lectura hacia el ERP, de la tabla `ser.sueros`. Se implementó como tablas separadas (no fusionadas con `catalogo_terapias`) porque 15 de los 16 `id_suero` reales colisionaban con `id_terapiaINV` existentes de terapias no relacionadas.
+
+### Estructura
+- **`catalogo_sueros`**: cabecera — `id_suero` (PK, igual a `ser.sueros.id_suero`, sin `AUTO_INCREMENT` porque el ERP asigna el ID), `nom_suero`, `Activo`, `UsuarioCreacion`, `UsuarioActualiza`. No guarda `precio` (solo vive en el ERP).
+- **`detalle_sueros`**: detalle — `id_suero` FK, `idInsumo` FK→insumos, `CantidadInsumo`
+
+### Rutas del Módulo
+| URL | Acción |
+|-----|--------|
+| `GET /catalogo-sueros` | Listado de sueros activos |
+| `POST /catalogo-sueros/sync` | Sincroniza altas/actualizaciones/bajas desde `ser.sueros` (solo `SELECT`) |
+| `GET /catalogo-sueros/edit/{id}` | Formulario para editar los insumos del suero (nombre/ID de solo lectura) |
+| `POST /catalogo-sueros/update/{id}` | Regenera `detalle_sueros` para el suero |
+
+SQL de creación: `database/migration_sueros.sql`.
 
 ---
 

@@ -54,6 +54,9 @@
             <a href="<?= url('catalogo-terapias') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'catalogo-terapias' ? 'active' : '' ?>">
                 <span class="icon">🧪</span> Terapias
             </a>
+            <a href="<?= url('catalogo-sueros') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'catalogo-sueros' ? 'active' : '' ?>">
+                <span class="icon">💉</span> Sueros
+            </a>
             <a href="<?= url('medida-insumo') ?>" class="sidebar-link <?= ($activeMenu ?? '') === 'medida-insumo' ? 'active' : '' ?>">
                 <span class="icon">📏</span> Unidades de Medida
             </a>
@@ -93,6 +96,13 @@
             </div>
             <div class="topbar-right">
                 <span><?= date('d/m/Y') ?></span>
+                <?php if ($user = currentUser()): ?>
+                    <span class="text-muted">Sesión: <?= e($user['nombre']) ?></span>
+                    <form method="POST" action="<?= url('auth/logout') ?>" style="display:inline">
+                        <?= csrfField() ?>
+                        <button type="submit" class="btn btn--sm btn--secondary">Cerrar sesión</button>
+                    </form>
+                <?php endif; ?>
             </div>
         </header>
 

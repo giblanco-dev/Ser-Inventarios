@@ -21,6 +21,11 @@ class Router
         $action         = $this->resolveAction($segments[1] ?? '');
         $id             = $segments[2] ?? null;
 
+        if ($controllerName !== 'AuthController' && empty($_SESSION['auth'])) {
+            $this->abort(401, 'Acceso no autorizado. Ingresa al módulo desde el ERP.');
+            return;
+        }
+
         $controllerFile = APP_ROOT . '/app/controllers/' . $controllerName . '.php';
 
         if (!file_exists($controllerFile)) {

@@ -1,6 +1,10 @@
 <?php
 /**
  * CatalogoTerapiasController — Controlador para el Módulo de Terapias
+ *
+ * El alta/baja de la terapia en sí se gobierna desde el ERP (ser.terapias)
+ * y llega aquí vía sincronización manual. Este controlador solo gestiona
+ * la sincronización y qué insumos consume cada terapia.
  */
 require_once APP_ROOT . '/app/models/CatalogoTerapiasModel.php';
 require_once APP_ROOT . '/app/models/InsumoModel.php';
@@ -31,81 +35,32 @@ class CatalogoTerapiasController
     }
 
     /**
-     * Formulario para nueva terapia
+     * Sincroniza el catálogo local con ser.terapias (ERP)
      */
-    public function create()
-    {
-        // Insumos disponibles (Solo INTE)
-        $insumosDisponibles = $this->insumoModel->findAllWithDetails(['tipo' => 'INTE', 'activo' => 1], 1000);
-
-        renderView('catalogo_terapias/form', [
-            'pageTitle'          => 'Nueva Terapia',
-            'activeMenu'         => 'catalogo-terapias',
-            'action'             => url('catalogo-terapias/store'),
-            'terapia'            => null,
-            'detalles'           => [],
-            'insumosDisponibles' => $insumosDisponibles
-        ]);
-    }
-
-    /**
-     * Guarda la nueva terapia
-     */
-    public function store()
+    public function sync()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('catalogo-terapias');
         }
+        verifyCsrf();
 
-        $nom_terapia   = sanitize($_POST['nom_terapia']);
-        $id_terapiaERP = (int) $_POST['id_terapiaERP'];
-
-        if (empty($nom_terapia) || empty($id_terapiaERP)) {
-            flashMessage('error', 'El Nombre de la terapia y el ID ERP son obligatorios.');
-            redirect('catalogo-terapias/create');
+        try {
+            $resumen = $this->terapiaModel->sincronizarDesdeErp();
+            flashMessage('success', sprintf(
+                'Sincronización completada: %d altas, %d actualizados, %d bajas.',
+                $resumen['altas'],
+                $resumen['actualizados'],
+                $resumen['bajas']
+            ));
+        } catch (Exception $e) {
+            flashMessage('error', 'Ocurrió un error al sincronizar con el ERP.');
         }
 
-        $insumosIds = $_POST['insumo_id'] ?? [];
-        $cantidades = $_POST['cantidad'] ?? [];
-
-        $insumosDetalle = [];
-        foreach ($insumosIds as $index => $id_ins) {
-            $id_ins = (int) $id_ins;
-            $cant = (float) ($cantidades[$index] ?? 0);
-
-            if ($id_ins > 0 && $cant > 0) {
-                // Verificar duplicados en la misma solicitud
-                $exists = false;
-                foreach ($insumosDetalle as $det) {
-                    if ($det['idInsumo'] === $id_ins) {
-                        $exists = true; break;
-                    }
-                }
-                if (!$exists) {
-                    $insumosDetalle[] = [
-                        'idInsumo' => $id_ins,
-                        'cantidad' => $cant
-                    ];
-                }
-            }
-        }
-
-        $result = $this->terapiaModel->createTerapia(
-            ['id_terapiaERP' => $id_terapiaERP, 'nom_terapia' => $nom_terapia],
-            $insumosDetalle
-        );
-
-        if ($result) {
-            flashMessage('success', 'Terapia creada exitosamente.');
-            redirect('catalogo-terapias');
-        } else {
-            flashMessage('error', 'Ocurrió un error al guardar o el ERP ID ya existe.');
-            redirect('catalogo-terapias/create');
-        }
+        redirect('catalogo-terapias');
     }
 
     /**
-     * Formulario para editar terapia existente
+     * Formulario para editar los insumos de una terapia
      */
     public function edit(int $id)
     {
@@ -119,7 +74,7 @@ class CatalogoTerapiasController
         $insumosDisponibles = $this->insumoModel->findAllWithDetails(['tipo' => 'INTE', 'activo' => 1], 1000);
 
         renderView('catalogo_terapias/form', [
-            'pageTitle'          => 'Editar Terapia',
+            'pageTitle'          => 'Insumos de la Terapia',
             'activeMenu'         => 'catalogo-terapias',
             'action'             => url('catalogo-terapias/update/' . $id),
             'terapia'            => $terapia,
@@ -129,20 +84,19 @@ class CatalogoTerapiasController
     }
 
     /**
-     * Actualizar terapia
+     * Guarda los insumos asociados a la terapia
      */
     public function update(int $id)
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('catalogo-terapias');
         }
+        verifyCsrf();
 
-        $nom_terapia   = sanitize($_POST['nom_terapia']);
-        $id_terapiaERP = (int) $_POST['id_terapiaERP'];
-
-        if (empty($nom_terapia) || empty($id_terapiaERP)) {
-            flashMessage('error', 'El Nombre de la terapia y el ID ERP son obligatorios.');
-            redirect('catalogo-terapias/edit/' . $id);
+        $terapia = $this->terapiaModel->findById($id);
+        if (!$terapia) {
+            flashMessage('error', 'Terapia no encontrada.');
+            redirect('catalogo-terapias');
         }
 
         $insumosIds = $_POST['insumo_id'] ?? [];
@@ -170,34 +124,14 @@ class CatalogoTerapiasController
             }
         }
 
-        $result = $this->terapiaModel->updateTerapia(
-            $id,
-            ['id_terapiaERP' => $id_terapiaERP, 'nom_terapia' => $nom_terapia],
-            $insumosDetalle
-        );
+        $result = $this->terapiaModel->updateDetalle($id, $insumosDetalle);
 
         if ($result) {
-            flashMessage('success', 'Terapia actualizada exitosamente.');
+            flashMessage('success', 'Insumos de la terapia actualizados exitosamente.');
             redirect('catalogo-terapias');
         } else {
-            flashMessage('error', 'Ocurrió un error al actualizar la terapia.');
+            flashMessage('error', 'Ocurrió un error al actualizar los insumos de la terapia.');
             redirect('catalogo-terapias/edit/' . $id);
         }
-    }
-
-    /**
-     * Borrado lógico
-     */
-    public function delete(int $id)
-    {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $deleted = $this->terapiaModel->deactivate($id);
-            if ($deleted) {
-                flashMessage('success', 'La terapia ha sido desactivada correctamente.');
-            } else {
-                flashMessage('error', 'No se pudo desactivar la terapia.');
-            }
-        }
-        redirect('catalogo-terapias');
     }
 }

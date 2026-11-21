@@ -3,7 +3,7 @@
         <span class="page-icon">🧪</span>
         <div>
             <h1 class="page-title"><?= e($pageTitle) ?></h1>
-            <p class="page-subtitle"><?= isset($terapia) ? 'Modificar datos de la terapia y sus insumos.' : 'Registrar una nueva terapia y sus componentes.' ?></p>
+            <p class="page-subtitle">Gestiona los insumos que consume esta terapia.</p>
         </div>
     </div>
     <div class="page-actions">
@@ -14,7 +14,8 @@
 </div>
 
 <form action="<?= $action ?>" method="POST" id="terapia-form">
-    
+    <?= csrfField() ?>
+
     <div class="card mb-lg">
         <div class="card-header">
             <h3>📖 Datos de la Terapia</h3>
@@ -22,16 +23,14 @@
         <div class="card-body">
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="nom_terapia" class="form-label">Nombre de la Terapia <span class="text-danger">*</span></label>
-                    <input type="text" id="nom_terapia" name="nom_terapia" class="form-control" 
-                           value="<?= isset($terapia['nom_terapia']) ? e($terapia['nom_terapia']) : '' ?>" required>
+                    <label class="form-label">Nombre de la Terapia</label>
+                    <input type="text" class="form-control" value="<?= e($terapia['nom_terapia']) ?>" disabled>
+                    <small class="text-gray text-xs mt-sm d-block">Este dato proviene del ERP; usa "Sincronizar con ERP" para actualizarlo.</small>
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="id_terapiaERP" class="form-label">ID ERP (Externo) <span class="text-danger">*</span></label>
-                    <input type="number" id="id_terapiaERP" name="id_terapiaERP" class="form-control" 
-                           value="<?= isset($terapia['id_terapiaERP']) ? e($terapia['id_terapiaERP']) : '' ?>" required>
-                    <small class="text-gray text-xs mt-sm d-block">Identificador proveniente del sistema externo (ERP).</small>
+                    <label class="form-label">ID ERP</label>
+                    <input type="text" class="form-control" value="<?= e($terapia['id_terapiaERP']) ?>" disabled>
                 </div>
             </div>
         </div>
@@ -92,7 +91,7 @@
 
     <div class="form-actions text-right">
         <button type="submit" class="btn btn--primary">
-            <span class="icon">💾</span> Guardar Terapia
+            <span class="icon">💾</span> Guardar Insumos
         </button>
     </div>
 </form>
@@ -156,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selects = document.querySelectorAll('select[name="insumo_id[]"]');
         const ids = [];
         let hasDuplicates = false;
-        
+
         selects.forEach(select => {
             if (select.value) {
                 if (ids.includes(select.value)) {
@@ -170,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             alert('Existe al menos un insumo duplicado en la lista. Por favor consolídalo o elimina el duplicado.');
         }
-        
+
         // Cantidades ya son validadas por HTML5 (min="0.01")
     });
 });

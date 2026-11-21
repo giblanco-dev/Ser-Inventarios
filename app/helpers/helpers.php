@@ -61,6 +61,28 @@ function verifyCsrf(): void
     unset($_SESSION['_csrf_token']);
 }
 
+// ── Autenticación (SSO desde el ERP) ─────────────────────────
+/**
+ * Retorna los datos del usuario autenticado en este módulo, o null.
+ *
+ * @return array|null
+ */
+function currentUser(): ?array
+{
+    return $_SESSION['auth'] ?? null;
+}
+
+/**
+ * Verifica si el usuario autenticado tiene el rol indicado.
+ *
+ * @param string $role
+ * @return bool
+ */
+function hasRole(string $role): bool
+{
+    return ($_SESSION['auth']['rol'] ?? null) === $role;
+}
+
 // ── Flash Messages ──────────────────────────────────────────
 /**
  * Almacena un mensaje flash en la sesión.

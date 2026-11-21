@@ -1,10 +1,10 @@
 <?php
 /**
- * SER Inventarios — Configuración General
+ * SER Inventarios — Configuración General (plantilla)
  * Consultorio de Medicina Alternativa Ser S.C.
  *
- * Este archivo define las constantes de entorno, conexión a BD,
- * y parámetros de la aplicación. NUNCA exponer al document root.
+ * Copia este archivo a config.php y completa los valores reales.
+ * config.php NO se versiona (ver .gitignore) porque contiene credenciales.
  */
 
 // ── Entorno ──────────────────────────────────────────────────
@@ -23,8 +23,15 @@ define('APP_ROOT', dirname(__DIR__, 2));
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'ser_inventario');
 define('DB_USER', 'root');
-define('DB_PASS', 'xTNhJSP0)Ai}');
+define('DB_PASS', 'CAMBIAR_ESTA_CONTRASENA');
 define('DB_CHARSET', 'utf8mb4');
+
+// ── SSO con el ERP ───────────────────────────────────────────
+define('ERP_BASE_URL', 'http://localhost/erp/');
+define('SSO_ROLES_PERMITIDOS', ['Supervisor', 'Administrador']);
+
+// ── Sincronización con el ERP (mismo servidor MySQL) ──────────
+define('ERP_DB_SCHEMA', 'ser'); // schema real del ERP, usado solo para SELECT de sincronización
 
 // ── Paginación ───────────────────────────────────────────────
 define('ITEMS_PER_PAGE', 15);
