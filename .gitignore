@@ -4,3 +4,4 @@ app/config/config.php
 # Herramientas de agentes IA
 .claude/
 .serena/
+specs/
